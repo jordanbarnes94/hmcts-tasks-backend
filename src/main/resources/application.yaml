@@ -2,48 +2,47 @@ server:
   port: 4000
   shutdown: "graceful"
 
-# If you want to use a database then uncomment the `group:, readiness: and include: "db"`
-# lines in the health probes and uncomment the datasource section
 management:
   endpoint:
     health:
       show-details: "always"
-      # group:
-      #  readiness:
-      #   include: "db"
+      group:
+        readiness:
+          include: "db"
   endpoints:
     web:
       base-path: /
       exposure:
-        include: info # should we have more?
+        include: info
 
 springdoc:
-  packagesToScan: uk.gov.hmcts.reform.dev.controllers
+  packagesToScan: uk.gov.hmcts.reform.dev.modules.tasks.controllers
   writer-with-order-by-keys: true
 
 spring:
-  config:
-    import: "optional:configtree:/mnt/secrets/test/"
   application:
-    name: Dev Test
-#  datasource:
-#    driver-class-name: org.postgresql.Driver
-#    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}${DB_OPTIONS:}
-#    username: ${DB_USER_NAME}
-#    password: ${DB_PASSWORD}
-#    properties:
-#      charSet: UTF-8
-#    hikari:
-#      minimumIdle: 2
-#      maximumPoolSize: 10
-#      idleTimeout: 10000
-#      poolName: {to-be-defined}HikariCP
-#      maxLifetime: 7200000
-#      connectionTimeout: 30000
-#  jpa:
-#    properties:
-#      hibernate:
-#        jdbc:
-#          lob:
-#            # silence the 'wall-of-text' - unnecessary exception throw about blob types
-#            non_contextual_creation: true
+    name: HMCTS Task Management API
+
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:file:./data/taskdb;MODE=PostgreSQL
+    username: admin
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: none
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+
+  # H2 Console (accessible at http://localhost:4000/h2-console)
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+logging:
+  level:
+    uk.gov.hmcts.reform.dev: DEBUG  # Your app logs at DEBUG level
+    org.springframework.web: INFO    # Spring framework at INFO
+    org.hibernate.SQL: DEBUG         # See SQL queries (optional)
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE  # See SQL parameters (optional)

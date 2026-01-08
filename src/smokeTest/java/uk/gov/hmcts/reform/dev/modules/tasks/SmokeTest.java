@@ -1,4 +1,4 @@
-package uk.gov.hmcts.reform.dev;
+package uk.gov.hmcts.reform.dev.modules.tasks;
 
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
@@ -12,10 +12,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import static io.restassured.RestAssured.given;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
-class SampleSmokeTest {
-    protected static final String CONTENT_TYPE_VALUE = "application/json";
-
-    @Value("${TEST_URL:http://localhost:8080}")
+class SmokeTest {
+    @Value("${TEST_URL:http://localhost:4000}")
     private String testUrl;
 
     @BeforeEach
@@ -25,15 +23,15 @@ class SampleSmokeTest {
     }
 
     @Test
-    void smokeTest() {
+    void isApplicationRunning() {
         Response response = given()
-            .contentType(ContentType.JSON)
+            .contentType(ContentType.TEXT)
             .when()
             .get()
             .then()
             .extract().response();
 
         Assertions.assertEquals(200, response.statusCode());
-        Assertions.assertTrue(response.asString().startsWith("Welcome"));
+        Assertions.assertEquals("Welcome to HMCTS Task Management API", response.asString());
     }
 }

@@ -1,0 +1,60 @@
+# Functional Test Configuration
+# This overrides src/main/resources/application.yaml for functional tests only
+# Key difference: Uses in-memory H2 database that's fresh for each test run
+
+server:
+  port: 0  # Random port for tests (avoids conflicts if multiple test suites run)
+
+management:
+  endpoint:
+    health:
+      show-details: "always"
+      group:
+        readiness:
+          include: "db"
+  endpoints:
+    web:
+      base-path: /
+      exposure:
+        include: info
+
+springdoc:
+  packagesToScan: uk.gov.hmcts.reform.dev.modules.tasks.controllers
+  writer-with-order-by-keys: true
+
+spring:
+  application:
+    name: HMCTS Task Management API - Functional Tests
+
+  datasource:
+    driver-class-name: org.h2.Driver
+    # CRITICAL: in-memory database (mem:) instead of file-based (file:)
+    # Database is created fresh for each test class and destroyed after
+    url: jdbc:h2:mem:functionaltest;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
+    username: admin
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: none  # Let Flyway manage schema
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+    show-sql: false  # Less noise in test output
+
+  flyway:
+    enabled: true
+    # Include both main migrations AND test-specific seed data
+    locations: classpath:db/migration,classpath:db/test-data
+    clean-disabled: false  # Allow Flyway clean in tests (useful for debugging)
+
+  # H2 Console disabled in tests (not needed)
+  h2:
+    console:
+      enabled: false
+
+logging:
+  level:
+    uk.gov.hmcts.reform.dev: INFO           # Less verbose for tests
+    org.springframework.web: WARN            # Only warnings from Spring
+    org.hibernate.SQL: DEBUG                 # Still see SQL in tests (helpful for debugging)
+    org.flywaydb: INFO                       # See Flyway migrations run
