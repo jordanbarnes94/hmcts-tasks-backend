@@ -29,6 +29,7 @@ import static org.hamcrest.Matchers.nullValue;
  * - ID 103: PENDING "Modifiable - Pending", due 2026-01-18
  * - ID 104: PENDING "Modifiable - No Description", due 2026-01-19 (no description)
  *
+ * <p>
  * PROTECTED TASKS (never modified, safe for read-only tests):
  * - IDs 105-109: PENDING tasks, due 2026-01-20 to 2026-01-24
  * - IDs 110-114: IN_PROGRESS tasks, due 2026-01-25 to 2026-01-29
@@ -98,8 +99,8 @@ class FunctionalTests {
         // Seed data: 20 tasks total (5 expendable: 100-104, 15 protected: 105-119)
         // Other tests may delete expendable tasks, but protected tasks remain
         given().when().get().then().statusCode(200)
-            .body("$", hasSize(greaterThanOrEqualTo(15)))  // At least 15 protected tasks
-            .body("id", hasItems(105, 106, 107, 108, 109));  // Verify some protected IDs
+            .body("totalElements", greaterThanOrEqualTo(15))  // Check total, not content size
+            .body("content.id", hasItems(105, 106, 107, 108, 109));
     }
 
     /**
@@ -120,9 +121,9 @@ class FunctionalTests {
     void shouldFilterTasksByPendingStatus() {
         // Protected PENDING tasks: 105-109 (5 tasks)
         given().queryParam("status", "PENDING").when().get().then().statusCode(200)
-            .body("$", hasSize(greaterThanOrEqualTo(5)))  // At least 5 protected PENDING tasks
-            .body("status", everyItem(equalTo("PENDING")))
-            .body("id", hasItems(105, 106, 107, 108, 109));  // All protected PENDING IDs
+            .body("content", hasSize(greaterThanOrEqualTo(5)))  // At least 5 protected PENDING tasks
+            .body("content.status", everyItem(equalTo("PENDING")))
+            .body("content.id", hasItems(105, 106, 107, 108, 109));  // All protected PENDING IDs
     }
 
     /**
@@ -132,9 +133,9 @@ class FunctionalTests {
     void shouldFilterTasksByInProgressStatus() {
         // Protected IN_PROGRESS tasks: 110-114 (5 tasks)
         given().queryParam("status", "IN_PROGRESS").when().get().then().statusCode(200)
-            .body("$", hasSize(greaterThanOrEqualTo(5)))  // At least 5 protected IN_PROGRESS tasks
-            .body("status", everyItem(equalTo("IN_PROGRESS")))
-            .body("id", hasItems(110, 111, 112, 113, 114));  // All protected IN_PROGRESS IDs
+            .body("content", hasSize(greaterThanOrEqualTo(5)))  // At least 5 protected IN_PROGRESS tasks
+            .body("content.status", everyItem(equalTo("IN_PROGRESS")))
+            .body("content.id", hasItems(110, 111, 112, 113, 114));  // All protected IN_PROGRESS IDs
     }
 
     /**
@@ -212,7 +213,8 @@ class FunctionalTests {
     void shouldReturnTasksSortedByDueDate() {
         given().when().get().then().statusCode(200)
             // Seed data sorted by due date: ID 100 has earliest (2026-01-15)
-            .body("[0].id", equalTo(100)).body("[0].dueDate", equalTo("2026-01-15T10:00:00"));
+            .body("content[0].id", equalTo(100))
+            .body("content[0].dueDate", equalTo("2026-01-15T10:00:00"));
     }
 
     // ========================================
@@ -296,12 +298,14 @@ class FunctionalTests {
     @Test
     void shouldReturn400WhenTitleTooLong() {
         String longTitle = "a".repeat(201); // Max is 200
-        String requestBody = String.format("""
-            {
-                "title": "%s",
-                "dueDate": "2026-02-15T14:30:00"
-            }
-            """, longTitle);
+        String requestBody = String.format(
+            """
+                {
+                    "title": "%s",
+                    "dueDate": "2026-02-15T14:30:00"
+                }
+                """, longTitle
+        );
 
         given().contentType(ContentType.JSON).body(requestBody).when().post().then().statusCode(400)
             .body("status", equalTo(400)).body("validationErrors.title", notNullValue());  // Title has validation error
@@ -313,13 +317,15 @@ class FunctionalTests {
     @Test
     void shouldReturn400WhenDescriptionTooLong() {
         String longDescription = "a".repeat(1001); // Max is 1000
-        String requestBody = String.format("""
-            {
-                "title": "Valid title",
-                "description": "%s",
-                "dueDate": "2026-02-15T14:30:00"
-            }
-            """, longDescription);
+        String requestBody = String.format(
+            """
+                {
+                    "title": "Valid title",
+                    "description": "%s",
+                    "dueDate": "2026-02-15T14:30:00"
+                }
+                """, longDescription
+        );
 
         given().contentType(ContentType.JSON).body(requestBody).when().post().then().statusCode(400)
             .body("status", equalTo(400))
@@ -376,5 +382,284 @@ class FunctionalTests {
             .body("status", equalTo(400)).body("error", equalTo("Validation Failed"))
             .body("validationErrors.title", notNullValue())    // Title has validation error
             .body("validationErrors.dueDate", notNullValue()); // DueDate has validation error
+    }
+
+    /**
+     * Test: Update task via PUT /api/tasks/{id}
+     * Verifies: 200 OK, all fields updated correctly
+     */
+    @Test
+    void shouldUpdateTaskViaHttpPut() {
+        // Use expendable task 104 (Modifiable - No Description)
+        String updateBody = """
+            {
+                "title": "Fully Updated Task",
+                "description": "Now has a description",
+                "dueDate": "2026-03-15T16:30:00",
+                "status": "IN_PROGRESS"
+            }
+            """;
+
+        given().contentType(ContentType.JSON).body(updateBody).when().put("/{id}", 104).then().statusCode(200)
+            .body("id", equalTo(104)).body("title", equalTo("Fully Updated Task"))
+            .body("description", equalTo("Now has a description")).body("dueDate", equalTo("2026-03-15T16:30:00"))
+            .body("status", equalTo("IN_PROGRESS"));
+    }
+
+    /**
+     * Test: Update status via PUT (not just PATCH)
+     */
+    @Test
+    void shouldUpdateStatusViaPut() {
+        // Use expendable task 103 (Modifiable - Pending)
+        // Keep other fields the same, just change status
+        String updateBody = """
+            {
+                "title": "Modifiable - Pending",
+                "description": "Safe to modify",
+                "dueDate": "2026-01-18T10:00:00",
+                "status": "COMPLETED"
+            }
+            """;
+
+        given().contentType(ContentType.JSON).body(updateBody).when().put("/{id}", 103).then().statusCode(200)
+            .body("id", equalTo(103)).body("status", equalTo("COMPLETED"));
+
+        // Verify it persisted
+        given().when().get("/{id}", 103).then().statusCode(200).body("status", equalTo("COMPLETED"));
+    }
+
+    /**
+     * Test: 404 when updating non-existent task via PUT
+     */
+    @Test
+    void shouldReturn404WhenUpdatingNonExistentTaskViaPut() {
+        String updateBody = """
+            {
+                "title": "Doesn't matter",
+                "dueDate": "2026-02-15T14:30:00",
+                "status": "PENDING"
+            }
+            """;
+
+        given().contentType(ContentType.JSON).body(updateBody).when().put("/{id}", 99999).then().statusCode(404)
+            .body("status", equalTo(404)).body("error", equalTo("Not Found"));
+    }
+
+    /**
+     * Test: 400 when title is missing in PUT
+     */
+    @Test
+    void shouldReturn400WhenPutTitleMissing() {
+        String updateBody = """
+            {
+                "description": "Missing title",
+                "dueDate": "2026-02-15T14:30:00",
+                "status": "PENDING"
+            }
+            """;
+
+        given().contentType(ContentType.JSON).body(updateBody).when().put("/{id}", 105).then().statusCode(400)
+            .body("status", equalTo(400)).body("error", equalTo("Validation Failed"))
+            .body("validationErrors.title", notNullValue());
+    }
+
+    /**
+     * Test: 400 when dueDate is missing in PUT
+     */
+    @Test
+    void shouldReturn400WhenPutDueDateMissing() {
+        String updateBody = """
+            {
+                "title": "Missing due date",
+                "status": "PENDING"
+            }
+            """;
+
+        given().contentType(ContentType.JSON).body(updateBody).when().put("/{id}", 105).then().statusCode(400)
+            .body("status", equalTo(400)).body("error", equalTo("Validation Failed"))
+            .body("validationErrors.dueDate", notNullValue());
+    }
+
+    /**
+     * Test: 400 when title exceeds maximum length in PUT
+     */
+    @Test
+    void shouldReturn400WhenPutTitleTooLong() {
+        String longTitle = "a".repeat(201); // Max is 200
+        String updateBody = String.format(
+            """
+                {
+                    "title": "%s",
+                    "dueDate": "2026-02-15T14:30:00",
+                    "status": "PENDING"
+                }
+                """, longTitle
+        );
+
+        given().contentType(ContentType.JSON).body(updateBody).when().put("/{id}", 105).then().statusCode(400)
+            .body("status", equalTo(400)).body("validationErrors.title", notNullValue());
+    }
+
+    /**
+     * Test: 400 when status value is invalid in PUT
+     */
+    @Test
+    void shouldReturn400WhenPutStatusInvalid() {
+        String updateBody = """
+            {
+                "title": "Valid title",
+                "dueDate": "2026-02-15T14:30:00",
+                "status": "INVALID_STATUS"
+            }
+            """;
+
+        given().contentType(ContentType.JSON).body(updateBody).when().put("/{id}", 105).then().statusCode(400);
+    }
+
+    /**
+     * Test: Paginate tasks via HTTP
+     * Verifies: Page structure, metadata (totalPages, number, size, etc.)
+     */
+    @Test
+    void shouldPaginateTasksViaHttp() {
+        // Using protected tasks (105-119, 15 tasks minimum)
+        // Request page 0, size 5
+        given().queryParam("page", 0).queryParam("size", 5).when().get().then().statusCode(200)
+            .body("content", hasSize(5))  // Should have 5 items
+            .body("size", equalTo(5))  // Page size
+            .body("number", equalTo(0))  // Current page (0-indexed)
+            .body("totalPages", greaterThanOrEqualTo(3))  // At least 3 pages (15 tasks / 5 per page)
+            .body("totalElements", greaterThanOrEqualTo(15))  // At least 15 tasks
+            .body("first", equalTo(true))  // Is first page
+            .body("last", equalTo(false));  // Not last page
+    }
+
+    /**
+     * Test: Request second page
+     */
+    @Test
+    void shouldGetSecondPageViaHttp() {
+        given().queryParam("page", 1).queryParam("size", 5).when().get().then().statusCode(200)
+            .body("number", equalTo(1))  // Second page
+            .body("first", equalTo(false))  // Not first page
+            .body("content", hasSize(greaterThanOrEqualTo(1)));  // Has content
+    }
+
+    /**
+     * Test: Search tasks by text via HTTP
+     */
+    @Test
+    void shouldSearchTasksByTextViaHttp() {
+        // Protected task 105 has title "Protected - Pending 1"
+        given().queryParam("search", "Protected").when().get().then().statusCode(200)
+            .body("content", hasSize(greaterThanOrEqualTo(1))).body("content.title", hasItems("Protected - Pending 1"));
+    }
+
+    /**
+     * Test: Search is case-insensitive
+     */
+    @Test
+    void shouldSearchCaseInsensitiveViaHttp() {
+        given().queryParam("search", "protected")  // lowercase
+            .when().get().then().statusCode(200).body("content", hasSize(greaterThanOrEqualTo(1)))
+            .body("content.title", hasItems("Protected - Pending 1"));
+    }
+
+    /**
+     * Test: Filter by date range via HTTP
+     */
+    @Test
+    void shouldFilterByDateRangeViaHttp() {
+        // Protected tasks 105-109 are due 2026-01-20 to 2026-01-24
+        given().queryParam("dueDateFrom", "2026-01-20T00:00:00").queryParam("dueDateTo", "2026-01-24T23:59:59").when()
+            .get().then().statusCode(200)
+            .body("content", hasSize(greaterThanOrEqualTo(5)))  // At least 5 protected PENDING tasks
+            .body("content.id", hasItems(105, 106, 107, 108, 109));
+    }
+
+    /**
+     * Test: Filter by status and date range
+     */
+    @Test
+    void shouldCombineStatusAndDateRangeViaHttp() {
+        // Protected PENDING tasks 105-109 are due 2026-01-20 to 2026-01-24
+        given().queryParam("status", "PENDING").queryParam("dueDateFrom", "2026-01-20T00:00:00")
+            .queryParam("dueDateTo", "2026-01-24T23:59:59").when().get().then().statusCode(200)
+            .body("content", hasSize(greaterThanOrEqualTo(5))).body("content.status", everyItem(equalTo("PENDING")))
+            .body("content.id", hasItems(105, 106, 107, 108, 109));
+    }
+
+    /**
+     * Test: Combine all filters (status, search, date range, pagination)
+     */
+    @Test
+    void shouldCombineAllFiltersViaHttp() {
+        // Protected PENDING tasks 105-109 have "Protected" in title, due 2026-01-20 to 2026-01-24
+        given().queryParam("status", "PENDING").queryParam("search", "Protected")
+            .queryParam("dueDateFrom", "2026-01-20T00:00:00").queryParam("dueDateTo", "2026-01-24T23:59:59")
+            .queryParam("page", 0).queryParam("size", 3).when().get().then().statusCode(200)
+            .body("content", hasSize(3))  // Page size 3
+            .body("content.status", everyItem(equalTo("PENDING"))).body("size", equalTo(3)).body("number", equalTo(0));
+    }
+
+    /**
+     * Test: Default pagination when not specified
+     */
+    @Test
+    void shouldUseDefaultPaginationWhenNotSpecified() {
+        // Should return first page with default size
+        given().when().get().then().statusCode(200).body("number", equalTo(0))  // First page
+            .body("size", equalTo(10))  // Default size
+            .body("content", hasSize(greaterThanOrEqualTo(1)));
+    }
+
+    /**
+     * Test: Empty results when no matches
+     */
+    @Test
+    void shouldReturnEmptyPageWhenNoMatchesViaHttp() {
+        given().queryParam("search", "nonexistentsearchterm12345").when().get().then().statusCode(200)
+            .body("content", hasSize(0)).body("totalElements", equalTo(0)).body("totalPages", equalTo(0))
+            .body("empty", equalTo(true));
+    }
+
+    /**
+     * Test: Filter by due date from only (no upper bound)
+     */
+    @Test
+    void shouldFilterByDueDateFromOnlyViaHttp() {
+        // Tasks due on or after 2026-01-25 (IN_PROGRESS tasks 110-114)
+        given().queryParam("dueDateFrom", "2026-01-25T00:00:00").when().get().then().statusCode(200)
+            .body("content", hasSize(greaterThanOrEqualTo(5))).body("content.id", hasItems(110, 111, 112, 113, 114));
+    }
+
+    /**
+     * Test: Filter by due date to only (no lower bound)
+     */
+    @Test
+    void shouldFilterByDueDateToOnlyViaHttp() {
+        // Use only protected tasks 105-109
+        given().queryParam("dueDateTo", "2026-01-24T23:59:59")
+            .when().get()
+            .then().statusCode(200)
+            .body("content.id", hasItems(105, 106, 107, 108, 109));
+    }
+
+    /**
+     * Test: Pagination preserves filters
+     */
+    @Test
+    void shouldPreserveFiltersAcrossPagesViaHttp() {
+        // Get first page with status filter
+        Integer totalElements =
+            given().queryParam("status", "PENDING").queryParam("page", 0).queryParam("size", 3).when().get().then()
+                .statusCode(200).body("content.status", everyItem(equalTo("PENDING"))).extract().path("totalElements");
+
+        // Get second page with same filter
+        if (totalElements > 3) {  // Only test if there's a second page
+            given().queryParam("status", "PENDING").queryParam("page", 1).queryParam("size", 3).when().get().then()
+                .statusCode(200).body("content.status", everyItem(equalTo("PENDING")));
+        }
     }
 }

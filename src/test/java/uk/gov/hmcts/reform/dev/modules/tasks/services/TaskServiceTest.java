@@ -5,8 +5,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import uk.gov.hmcts.reform.dev.modules.tasks.dtos.CreationDTO;
 import uk.gov.hmcts.reform.dev.modules.tasks.dtos.ResponseDTO;
+import uk.gov.hmcts.reform.dev.modules.tasks.dtos.UpdateDTO;
 import uk.gov.hmcts.reform.dev.modules.tasks.dtos.UpdateStatusDTO;
 import uk.gov.hmcts.reform.dev.modules.tasks.exceptions.TaskNotFoundException;
 import uk.gov.hmcts.reform.dev.modules.tasks.models.Task;
@@ -39,9 +46,9 @@ class TaskServiceTest {
     @Test
     void shouldCreateTask() {
         // Arrange - Test data
-        String title = "Review case";
-        String description = "Important case review";
-        String dueDate = "2026-01-15T10:00:00";
+        final String title = "Review case";
+        final String description = "Important case review";
+        final String dueDate = "2026-01-15T10:00:00";
 
         // Mock repository response
         Task savedTask = new Task();
@@ -72,9 +79,9 @@ class TaskServiceTest {
     @Test
     void shouldGetTask_WhenExists() {
         // Arrange - Test data
-        Long taskId = 1L;
-        String title = "Review case";
-        String description = "Important case review";
+        final Long taskId = 1L;
+        final String title = "Review case";
+        final String description = "Important case review";
 
         // Mock repository response
         Task existingTask = new Task();
@@ -101,7 +108,7 @@ class TaskServiceTest {
     @Test
     void shouldGetTask_WhenNotExists_ThrowsException() {
         // Arrange
-        Long taskId = 999L;
+        final Long taskId = 999L;
         when(taskRepository.findById(taskId)).thenReturn(Optional.empty());
 
         // Act & Assert
@@ -110,6 +117,7 @@ class TaskServiceTest {
         verify(taskRepository, times(1)).findById(taskId);
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void shouldGetAllTasks() {
         // Arrange - Test data
@@ -126,23 +134,28 @@ class TaskServiceTest {
         task2.setDueDate(LocalDateTime.parse("2026-01-16T10:00:00"));
 
         List<Task> tasks = Arrays.asList(task1, task2);
-        when(taskRepository.findAllByOrderByDueDateAsc()).thenReturn(tasks);
+        Page<Task> taskPage = new PageImpl<>(tasks);
 
-        // Act
-        List<ResponseDTO> result = taskService.getAllTasks();
+        // Mock the Specification-based findAll method
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(taskPage);
+
+        // Act - Create a pageable
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("dueDate").ascending());
+        Page<ResponseDTO> result = taskService.getAllTasks(null, null, null, null, pageable);
 
         // Assert
         assertNotNull(result);
-        assertEquals(2, result.size());
-        assertEquals("Task 1", result.get(0).getTitle());
-        assertEquals("Task 2", result.get(1).getTitle());
+        assertEquals(2, result.getContent().size());
+        assertEquals("Task 1", result.getContent().get(0).getTitle());
+        assertEquals("Task 2", result.getContent().get(1).getTitle());
 
-        verify(taskRepository, times(1)).findAllByOrderByDueDateAsc();
+        verify(taskRepository, times(1)).findAll(any(Specification.class), any(Pageable.class));
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void shouldGetAllTasksByStatus() {
-        // Arrange - Test data
+        // Arrange
         TaskStatus status = TaskStatus.PENDING;
 
         Task task1 = new Task();
@@ -158,20 +171,20 @@ class TaskServiceTest {
         task2.setDueDate(LocalDateTime.parse("2026-01-16T10:00:00"));
 
         List<Task> tasks = Arrays.asList(task1, task2);
-        when(taskRepository.findAllByStatusOrderByDueDateAsc(status)).thenReturn(tasks);
+        Page<Task> taskPage = new PageImpl<>(tasks);
+
+        // Mock ANY specification + pageable
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class)))
+            .thenReturn(taskPage);
 
         // Act
-        List<ResponseDTO> result = taskService.getAllTasksByStatus(status);
+        Page<ResponseDTO> result = taskService.getAllTasks(status, null, null, null);
 
         // Assert
-        assertNotNull(result);
-        assertEquals(2, result.size());
-        assertEquals("Pending Task 1", result.get(0).getTitle());
-        assertEquals("Pending Task 2", result.get(1).getTitle());
-        assertEquals(status, result.get(0).getStatus());
-        assertEquals(status, result.get(1).getStatus());
+        assertEquals(2, result.getContent().size());
+        assertEquals(status, result.getContent().getFirst().getStatus());
 
-        verify(taskRepository, times(1)).findAllByStatusOrderByDueDateAsc(status);
+        verify(taskRepository, times(1)).findAll(any(Specification.class), any(Pageable.class));
     }
 
     @Test
@@ -252,4 +265,68 @@ class TaskServiceTest {
         verify(taskRepository, times(1)).existsById(taskId);
         verify(taskRepository, never()).deleteById(taskId);
     }
+
+    @Test
+    void shouldUpdateTask_WhenExists() {
+        // Arrange - Test data
+        final Long taskId = 1L;
+        final String newTitle = "Updated title";
+        final String newDescription = "Updated description";
+        final String newDueDate = "2026-02-20T15:00:00";
+        final TaskStatus newStatus = TaskStatus.COMPLETED;
+
+        // Mock existing task
+        Task existingTask = new Task();
+        existingTask.setId(taskId);
+        existingTask.setTitle("Old title");
+        existingTask.setDescription("Old description");
+        existingTask.setStatus(TaskStatus.PENDING);
+        existingTask.setDueDate(LocalDateTime.parse("2026-01-15T10:00:00"));
+        when(taskRepository.findById(taskId)).thenReturn(Optional.of(existingTask));
+
+        // Mock saved task with updated values
+        Task updatedTask = new Task();
+        updatedTask.setId(taskId);
+        updatedTask.setTitle(newTitle);
+        updatedTask.setDescription(newDescription);
+        updatedTask.setStatus(newStatus);
+        updatedTask.setDueDate(LocalDateTime.parse(newDueDate));
+        when(taskRepository.save(any(Task.class))).thenReturn(updatedTask);
+
+        UpdateDTO dto = new UpdateDTO(newTitle, newDescription, newDueDate, newStatus);
+
+        // Act
+        ResponseDTO result = taskService.updateTask(taskId, dto);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(taskId, result.getId());
+        assertEquals(newTitle, result.getTitle());
+        assertEquals(newDescription, result.getDescription());
+        assertEquals(newStatus, result.getStatus());
+        assertEquals(LocalDateTime.parse(newDueDate), result.getDueDate());
+
+        verify(taskRepository, times(1)).findById(taskId);
+        verify(taskRepository, times(1)).save(any(Task.class));
+    }
+
+    @Test
+    void shouldUpdateTask_WhenNotExists_ThrowsException() {
+        // Arrange
+        final Long taskId = 999L;
+        final String newTitle = "Updated title";
+        final String newDescription = "Updated description";
+        final String newDueDate = "2026-02-20T15:00:00";
+        final TaskStatus newStatus = TaskStatus.COMPLETED;
+        when(taskRepository.findById(taskId)).thenReturn(Optional.empty());
+
+        UpdateDTO dto = new UpdateDTO(newTitle, newDescription, newDueDate, newStatus);
+
+        // Act & Assert
+        assertThrows(TaskNotFoundException.class, () -> taskService.updateTask(taskId, dto));
+
+        verify(taskRepository, times(1)).findById(taskId);
+        verify(taskRepository, never()).save(any(Task.class));
+    }
+
 }
