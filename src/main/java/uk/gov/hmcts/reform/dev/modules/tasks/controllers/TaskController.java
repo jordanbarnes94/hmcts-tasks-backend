@@ -67,7 +67,7 @@ public class TaskController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ResponseDTO> updateTaskStatus(
+    public ResponseEntity<ResponseDTO> updateTask(
         @PathVariable Long id,
         @Valid @RequestBody UpdateDTO request
     ) {

@@ -10,6 +10,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import uk.gov.hmcts.reform.dev.modules.tasks.models.TaskStatus;
 
+import java.time.LocalDateTime;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -23,9 +25,9 @@ public class UpdateDTO {
     @Size(max = 1000, message = "Description must not exceed 1000 characters")
     private String description;
 
-    @NotBlank(message = "Due date is required")
+    @NotNull(message = "Due date is required")
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-    private String dueDate;
+    private LocalDateTime dueDate;
 
     @NotNull(message = "Status is required")
     private TaskStatus status;

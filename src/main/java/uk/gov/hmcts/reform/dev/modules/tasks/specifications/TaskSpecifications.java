@@ -41,14 +41,22 @@ public class TaskSpecifications {
                 return null;  // No filter
             }
 
-            String searchPattern = "%" + searchText.toLowerCase() + "%";
+            // Escape LIKE wildcards so they are treated as literal characters
+            String escaped = searchText.toLowerCase()
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
+
+            String searchPattern = "%" + escaped + "%";
             Predicate titleMatch = criteriaBuilder.like(
                 criteriaBuilder.lower(root.get("title")),
-                searchPattern
+                searchPattern,
+                '\\'
             );
             Predicate descriptionMatch = criteriaBuilder.like(
                 criteriaBuilder.lower(root.get("description")),
-                searchPattern
+                searchPattern,
+                '\\'
             );
 
             return criteriaBuilder.or(titleMatch, descriptionMatch);

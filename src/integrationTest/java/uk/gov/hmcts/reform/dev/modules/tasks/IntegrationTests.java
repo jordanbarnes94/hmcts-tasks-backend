@@ -45,7 +45,7 @@ class IntegrationTests {
         String title = "Integration Test Task";
         String description = "Testing database persistence";
         String dueDate = "2026-01-20T10:00:00";
-        CreationDTO dto = new CreationDTO(title, description, dueDate);
+        CreationDTO dto = new CreationDTO(title, description, LocalDateTime.parse(dueDate));
 
         // Act
         ResponseDTO created = taskService.createTask(dto);
@@ -96,7 +96,7 @@ class IntegrationTests {
         String dueDate = "2026-01-20T10:00:00";
         TaskStatus newStatus = TaskStatus.IN_PROGRESS;
 
-        CreationDTO dto = new CreationDTO(title, null, dueDate);
+        CreationDTO dto = new CreationDTO(title, null, LocalDateTime.parse(dueDate));
         ResponseDTO created = taskService.createTask(dto);
         Long taskId = created.getId();
 
@@ -118,7 +118,7 @@ class IntegrationTests {
         // Arrange
         String title = "Task to Delete";
         String dueDate = "2026-01-20T10:00:00";
-        CreationDTO dto = new CreationDTO(title, null, dueDate);
+        CreationDTO dto = new CreationDTO(title, null, LocalDateTime.parse(dueDate));
         ResponseDTO created = taskService.createTask(dto);
         Long taskId = created.getId();
 
@@ -144,9 +144,9 @@ class IntegrationTests {
         String dueDate2 = "2026-01-20T10:00:00";
         String dueDate3 = "2026-01-22T10:00:00";
 
-        CreationDTO task1 = new CreationDTO(title1, null, dueDate1);
-        CreationDTO task2 = new CreationDTO(title2, null, dueDate2);
-        CreationDTO task3 = new CreationDTO(title3, null, dueDate3);
+        CreationDTO task1 = new CreationDTO(title1, null, LocalDateTime.parse(dueDate1));
+        CreationDTO task2 = new CreationDTO(title2, null, LocalDateTime.parse(dueDate2));
+        CreationDTO task3 = new CreationDTO(title3, null, LocalDateTime.parse(dueDate3));
 
         taskService.createTask(task1);
         taskService.createTask(task2);
@@ -188,10 +188,10 @@ class IntegrationTests {
         TaskStatus pendingStatus = TaskStatus.PENDING;
         TaskStatus inProgressStatus = TaskStatus.IN_PROGRESS;
 
-        CreationDTO pendingDto = new CreationDTO(pendingTitle, null, dueDate1);
+        CreationDTO pendingDto = new CreationDTO(pendingTitle, null, LocalDateTime.parse(dueDate1));
         ResponseDTO pendingTask = taskService.createTask(pendingDto);
 
-        CreationDTO inProgressDto = new CreationDTO(inProgressTitle, null, dueDate2);
+        CreationDTO inProgressDto = new CreationDTO(inProgressTitle, null, LocalDateTime.parse(dueDate2));
         ResponseDTO inProgressTask = taskService.createTask(inProgressDto);
         UpdateStatusDTO updateDto = new UpdateStatusDTO(inProgressStatus);
         taskService.updateStatus(inProgressTask.getId(), updateDto);
@@ -223,7 +223,7 @@ class IntegrationTests {
         // Arrange
         String title = "Timestamp Test Task";
         String dueDate = "2026-01-20T10:00:00";
-        CreationDTO dto = new CreationDTO(title, null, dueDate);
+        CreationDTO dto = new CreationDTO(title, null, LocalDateTime.parse(dueDate));
 
         // Act
         ResponseDTO created = taskService.createTask(dto);
@@ -245,7 +245,7 @@ class IntegrationTests {
         // Arrange
         String title = "Task Without Description";
         String dueDate = "2026-01-20T10:00:00";
-        CreationDTO dto = new CreationDTO(title, null, dueDate);
+        CreationDTO dto = new CreationDTO(title, null, LocalDateTime.parse(dueDate));
 
         // Act
         ResponseDTO created = taskService.createTask(dto);
@@ -267,7 +267,7 @@ class IntegrationTests {
         String originalTitle = "Original Task";
         String originalDescription = "Original description";
         String originalDueDate = "2026-01-20T10:00:00";
-        CreationDTO createDto = new CreationDTO(originalTitle, originalDescription, originalDueDate);
+        CreationDTO createDto = new CreationDTO(originalTitle, originalDescription, LocalDateTime.parse(originalDueDate));
         ResponseDTO created = taskService.createTask(createDto);
         Long taskId = created.getId();
 
@@ -278,7 +278,7 @@ class IntegrationTests {
         TaskStatus newStatus = TaskStatus.COMPLETED;
 
         // Act - Update the task
-        UpdateDTO updateDto = new UpdateDTO(newTitle, newDescription, newDueDate, newStatus);
+        UpdateDTO updateDto = new UpdateDTO(newTitle, newDescription, LocalDateTime.parse(newDueDate), newStatus);
         ResponseDTO updated = taskService.updateTask(taskId, updateDto);
 
         // Assert - Verify service response
@@ -303,7 +303,7 @@ class IntegrationTests {
         String title = "Task with description";
         String description = "This will be removed";
         String dueDate = "2026-01-20T10:00:00";
-        CreationDTO createDto = new CreationDTO(title, description, dueDate);
+        CreationDTO createDto = new CreationDTO(title, description, LocalDateTime.parse(dueDate));
         ResponseDTO created = taskService.createTask(createDto);
         Long taskId = created.getId();
 
@@ -313,7 +313,7 @@ class IntegrationTests {
         assertNotNull(initial.get().getDescription());
 
         // Act - Update with null description
-        UpdateDTO updateDto = new UpdateDTO(title, null, dueDate, TaskStatus.PENDING);
+        UpdateDTO updateDto = new UpdateDTO(title, null, LocalDateTime.parse(dueDate), TaskStatus.PENDING);
         ResponseDTO updated = taskService.updateTask(taskId, updateDto);
 
         // Assert - Verify description is null in response
@@ -330,14 +330,14 @@ class IntegrationTests {
         // Arrange - Create task
         String title = "Task to update";
         String dueDate = "2026-01-20T10:00:00";
-        CreationDTO createDto = new CreationDTO(title, null, dueDate);
+        CreationDTO createDto = new CreationDTO(title, null, LocalDateTime.parse(dueDate));
         ResponseDTO created = taskService.createTask(createDto);
         Long taskId = created.getId();
         LocalDateTime originalCreatedAt = created.getCreatedAt();
 
         // Act - Update the task
         String newTitle = "Updated title";
-        UpdateDTO updateDto = new UpdateDTO(newTitle, null, dueDate, TaskStatus.IN_PROGRESS);
+        UpdateDTO updateDto = new UpdateDTO(newTitle, null, LocalDateTime.parse(dueDate), TaskStatus.IN_PROGRESS);
         ResponseDTO updated = taskService.updateTask(taskId, updateDto);
 
         // Assert - Verify createdAt unchanged in response
@@ -353,9 +353,9 @@ class IntegrationTests {
     void shouldSearchTasksByTitleText() {
         // Arrange - Create tasks with different titles
         String searchTerm = "review";
-        CreationDTO task1 = new CreationDTO("Please review the document", null, "2026-01-20T10:00:00");
-        CreationDTO task2 = new CreationDTO("Submit report", null, "2026-01-21T10:00:00");
-        CreationDTO task3 = new CreationDTO("Review meeting notes", null, "2026-01-22T10:00:00");
+        CreationDTO task1 = new CreationDTO("Please review the document", null, LocalDateTime.parse("2026-01-20T10:00:00"));
+        CreationDTO task2 = new CreationDTO("Submit report", null, LocalDateTime.parse("2026-01-21T10:00:00"));
+        CreationDTO task3 = new CreationDTO("Review meeting notes", null, LocalDateTime.parse("2026-01-22T10:00:00"));
 
         taskService.createTask(task1);
         taskService.createTask(task2);
@@ -375,9 +375,9 @@ class IntegrationTests {
     void shouldSearchTasksByDescriptionText() {
         // Arrange - Create tasks where search term only appears in description
         String searchTerm = "urgent";
-        CreationDTO task1 = new CreationDTO("Task A", "This is urgent work", "2026-01-20T10:00:00");
-        CreationDTO task2 = new CreationDTO("Task B", "Normal priority", "2026-01-21T10:00:00");
-        CreationDTO task3 = new CreationDTO("Task C", "Urgent action required", "2026-01-22T10:00:00");
+        CreationDTO task1 = new CreationDTO("Task A", "This is urgent work", LocalDateTime.parse("2026-01-20T10:00:00"));
+        CreationDTO task2 = new CreationDTO("Task B", "Normal priority", LocalDateTime.parse("2026-01-21T10:00:00"));
+        CreationDTO task3 = new CreationDTO("Task C", "Urgent action required", LocalDateTime.parse("2026-01-22T10:00:00"));
 
         taskService.createTask(task1);
         taskService.createTask(task2);
@@ -397,9 +397,9 @@ class IntegrationTests {
     @Test
     void shouldFilterByDueDateRange() {
         // Arrange - Create tasks with different due dates
-        CreationDTO task1 = new CreationDTO("Early task", null, "2026-01-15T10:00:00");
-        CreationDTO task2 = new CreationDTO("Mid task", null, "2026-01-25T10:00:00");
-        CreationDTO task3 = new CreationDTO("Late task", null, "2026-02-05T10:00:00");
+        CreationDTO task1 = new CreationDTO("Early task", null, LocalDateTime.parse("2026-01-15T10:00:00"));
+        CreationDTO task2 = new CreationDTO("Mid task", null, LocalDateTime.parse("2026-01-25T10:00:00"));
+        CreationDTO task3 = new CreationDTO("Late task", null, LocalDateTime.parse("2026-02-05T10:00:00"));
 
         taskService.createTask(task1);
         taskService.createTask(task2);
@@ -421,9 +421,9 @@ class IntegrationTests {
     @Test
     void shouldCombineMultipleFilters() {
         // Arrange - Create tasks with various attributes
-        CreationDTO task1 = new CreationDTO("Review pending item", "Needs attention", "2026-01-25T10:00:00");
-        CreationDTO task2 = new CreationDTO("Review completed item", "Already done", "2026-01-26T10:00:00");
-        CreationDTO task3 = new CreationDTO("Submit pending item", "Needs attention", "2026-01-27T10:00:00");
+        CreationDTO task1 = new CreationDTO("Review pending item", "Needs attention", LocalDateTime.parse("2026-01-25T10:00:00"));
+        CreationDTO task2 = new CreationDTO("Review completed item", "Already done", LocalDateTime.parse("2026-01-26T10:00:00"));
+        CreationDTO task3 = new CreationDTO("Submit pending item", "Needs attention", LocalDateTime.parse("2026-01-27T10:00:00"));
 
         ResponseDTO created1 = taskService.createTask(task1);
         ResponseDTO created2 = taskService.createTask(task2);
@@ -431,7 +431,7 @@ class IntegrationTests {
 
         // Update task2 to COMPLETED status
         UpdateDTO updateDto =
-            new UpdateDTO("Review completed item", "Already done", "2026-01-26T10:00:00", TaskStatus.COMPLETED);
+            new UpdateDTO("Review completed item", "Already done", LocalDateTime.parse("2026-01-26T10:00:00"), TaskStatus.COMPLETED);
         taskService.updateTask(created2.getId(), updateDto);
 
         // Act - Combine filters: status=PENDING, search="review", date range
@@ -441,12 +441,9 @@ class IntegrationTests {
         Page<ResponseDTO> results =
             taskService.getAllTasks(TaskStatus.PENDING, "review", dueDateFrom, dueDateTo, pageable);
 
-        // Assert - Only task1 matches all criteria
+        // Assert - task1 matches all criteria, task2 and task3 do not
         List<ResponseDTO> tasks = results.getContent();
-        assertEquals(
-            1,
-            tasks.stream().filter(t -> t.getTitle().contains("Review") && t.getStatus() == TaskStatus.PENDING).count()
-        );
+        assertTrue(tasks.stream().allMatch(t -> t.getStatus() == TaskStatus.PENDING)); // all results are PENDING
         assertTrue(tasks.stream().anyMatch(t -> "Review pending item".equals(t.getTitle())));
         assertFalse(tasks.stream().anyMatch(t -> "Review completed item".equals(t.getTitle()))); // wrong status
         assertFalse(tasks.stream().anyMatch(t -> "Submit pending item".equals(t.getTitle()))); // no "review"
@@ -458,7 +455,7 @@ class IntegrationTests {
         for (int i = 1; i <= 25; i++) {
             String title = "Task " + i;
             String dueDate = String.format("2026-01-%02dT10:00:00", i);
-            CreationDTO task = new CreationDTO(title, null, dueDate);
+            CreationDTO task = new CreationDTO(title, null, LocalDateTime.parse(dueDate));
             taskService.createTask(task);
         }
 
@@ -482,7 +479,7 @@ class IntegrationTests {
     @Test
     void shouldReturnEmptyPageWhenNoMatches() {
         // Arrange - Create some tasks
-        CreationDTO task1 = new CreationDTO("Task A", null, "2026-01-20T10:00:00");
+        CreationDTO task1 = new CreationDTO("Task A", null, LocalDateTime.parse("2026-01-20T10:00:00"));
         taskService.createTask(task1);
 
         // Act - Search for something that doesn't exist
@@ -499,7 +496,7 @@ class IntegrationTests {
     @Test
     void shouldHandleCaseInsensitiveSearch() {
         // Arrange - Create task with mixed case
-        CreationDTO task1 = new CreationDTO("Review Document", "Important REVIEW needed", "2026-01-20T10:00:00");
+        CreationDTO task1 = new CreationDTO("Review Document", "Important REVIEW needed", LocalDateTime.parse("2026-01-20T10:00:00"));
         taskService.createTask(task1);
 
         // Act - Search with different cases

@@ -206,7 +206,8 @@ src/
 │       └── db/migration/                     # Database migrations
 │           ├── V1__create_tasks_table.sql
 │           ├── V2__insert_test_data.sql
-│           └── V3__add_task_indexes.sql      # Performance indexes
+│           ├── V3__add_task_indexes.sql      # Performance indexes
+│           └── V4__insert_bulk_test_data.sql # 50 realistic tasks
 ├── test/                                     # Unit tests
 ├── integrationTest/                          # Integration tests
 ├── functionalTest/                           # End-to-end HTTP tests
@@ -288,9 +289,8 @@ The `tasks` table:
 
 Performance indexes for common queries:
 
-- `idx_tasks_status` - Status filtering
 - `idx_tasks_due_date` - Date range queries and sorting
-- `idx_tasks_status_due_date` - Combined status + date filtering
+- `idx_tasks_status_due_date` - Status filtering and combined status + date queries (leftmost column covers status-only lookups)
 
 ### Migrations
 
@@ -299,6 +299,7 @@ Schema is version-controlled with Flyway:
 - `V1__create_tasks_table.sql` - Initial schema
 - `V2__insert_test_data.sql` - Sample data for development
 - `V3__add_task_indexes.sql` - Performance indexes
+- `V4__insert_bulk_test_data.sql` - 50 realistic HMCTS tasks
 
 ### Database Files
 

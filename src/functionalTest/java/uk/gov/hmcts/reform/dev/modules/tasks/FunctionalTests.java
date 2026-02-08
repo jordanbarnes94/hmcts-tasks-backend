@@ -22,18 +22,18 @@ import static org.hamcrest.Matchers.nullValue;
  * Uses RestAssured to make real HTTP requests to the running application
  *
  * <p>Test database is seeded with 20 tasks via V99__test_data.sql:
- * EXPENDABLE TASKS (can be modified/deleted by tests):
- * - ID 100: PENDING "Deletable - Pending", due 2026-01-15
- * - ID 101: IN_PROGRESS "Deletable - In Progress", due 2026-01-16
- * - ID 102: COMPLETED "Deletable - Completed", due 2026-01-17
- * - ID 103: PENDING "Modifiable - Pending", due 2026-01-18
- * - ID 104: PENDING "Modifiable - No Description", due 2026-01-19 (no description)
+ * PROTECTED TASKS (never modified, safe for read-only tests):
+ * - IDs 999001-999005: PENDING tasks, due 2026-01-20 to 2026-01-24
+ * - IDs 999006-999010: IN_PROGRESS tasks, due 2026-01-25 to 2026-01-29
+ * - IDs 999011-999015: COMPLETED tasks, due 2026-01-30 to 2026-02-03
  *
  * <p>
- * PROTECTED TASKS (never modified, safe for read-only tests):
- * - IDs 105-109: PENDING tasks, due 2026-01-20 to 2026-01-24
- * - IDs 110-114: IN_PROGRESS tasks, due 2026-01-25 to 2026-01-29
- * - IDs 115-119: COMPLETED tasks, due 2026-01-30 to 2026-02-03
+ * EXPENDABLE TASKS (can be modified/deleted by tests):
+ * - ID 999016: PENDING "Deletable - Pending", due 2026-01-15
+ * - ID 999017: IN_PROGRESS "Deletable - In Progress", due 2026-01-16
+ * - ID 999018: COMPLETED "Deletable - Completed", due 2026-01-17
+ * - ID 999019: PENDING "Modifiable - Pending", due 2026-01-18
+ * - ID 999020: PENDING "Modifiable - No Description", due 2026-01-19 (no description)
  * </p>
  */
 @SuppressWarnings({"checkstyle:SummaryJavadoc", "checkstyle:JavadocParagraph"})
@@ -96,11 +96,11 @@ class FunctionalTests {
      */
     @Test
     void shouldGetAllTasksViaHttpGet() {
-        // Seed data: 20 tasks total (5 expendable: 100-104, 15 protected: 105-119)
+        // Seed data: 20 tasks total (15 protected: 999001-999015, 5 expendable: 999016-999020)
         // Other tests may delete expendable tasks, but protected tasks remain
         given().when().get().then().statusCode(200)
             .body("totalElements", greaterThanOrEqualTo(15))  // Check total, not content size
-            .body("content.id", hasItems(105, 106, 107, 108, 109));
+            .body("content.id", hasItems(999001, 999002, 999003, 999004, 999005));
     }
 
     /**
@@ -109,7 +109,7 @@ class FunctionalTests {
     @Test
     void shouldGetSingleTaskById() {
         // Use protected task that's never modified
-        given().when().get("/{id}", 105).then().statusCode(200).body("id", equalTo(105))
+        given().when().get("/{id}", 999001).then().statusCode(200).body("id", equalTo(999001))
             .body("title", equalTo("Protected - Pending 1")).body("description", equalTo("Safe task for filtering"))
             .body("status", equalTo("PENDING"));
     }
@@ -119,11 +119,11 @@ class FunctionalTests {
      */
     @Test
     void shouldFilterTasksByPendingStatus() {
-        // Protected PENDING tasks: 105-109 (5 tasks)
+        // Protected PENDING tasks: 999001-999005 (5 tasks)
         given().queryParam("status", "PENDING").when().get().then().statusCode(200)
             .body("content", hasSize(greaterThanOrEqualTo(5)))  // At least 5 protected PENDING tasks
             .body("content.status", everyItem(equalTo("PENDING")))
-            .body("content.id", hasItems(105, 106, 107, 108, 109));  // All protected PENDING IDs
+            .body("content.id", hasItems(999001, 999002, 999003, 999004, 999005));  // All protected PENDING IDs
     }
 
     /**
@@ -131,11 +131,11 @@ class FunctionalTests {
      */
     @Test
     void shouldFilterTasksByInProgressStatus() {
-        // Protected IN_PROGRESS tasks: 110-114 (5 tasks)
+        // Protected IN_PROGRESS tasks: 999006-999010 (5 tasks)
         given().queryParam("status", "IN_PROGRESS").when().get().then().statusCode(200)
             .body("content", hasSize(greaterThanOrEqualTo(5)))  // At least 5 protected IN_PROGRESS tasks
             .body("content.status", everyItem(equalTo("IN_PROGRESS")))
-            .body("content.id", hasItems(110, 111, 112, 113, 114));  // All protected IN_PROGRESS IDs
+            .body("content.id", hasItems(999006, 999007, 999008, 999009, 999010));  // All protected IN_PROGRESS IDs
     }
 
     /**
@@ -143,15 +143,15 @@ class FunctionalTests {
      */
     @Test
     void shouldUpdateTaskStatusViaPatch() {
-        // Update task 103 (expendable/modifiable) from PENDING to IN_PROGRESS
+        // Update task 999019 (expendable/modifiable) from PENDING to IN_PROGRESS
         String updateBody = """
             {
                 "status": "IN_PROGRESS"
             }
             """;
 
-        given().contentType(ContentType.JSON).body(updateBody).when().patch("/{id}/status", 103).then().statusCode(200)
-            .body("id", equalTo(103)).body("status", equalTo("IN_PROGRESS"))
+        given().contentType(ContentType.JSON).body(updateBody).when().patch("/{id}/status", 999019).then().statusCode(200)
+            .body("id", equalTo(999019)).body("status", equalTo("IN_PROGRESS"))
             .body("title", equalTo("Modifiable - Pending"));  // Other fields unchanged
     }
 
@@ -160,11 +160,11 @@ class FunctionalTests {
      */
     @Test
     void shouldDeleteTaskViaHttpDelete() {
-        // Delete expendable task 102
-        given().when().delete("/{id}", 102).then().statusCode(204);  // No Content
+        // Delete expendable task 999018
+        given().when().delete("/{id}", 999018).then().statusCode(204);  // No Content
 
         // Verify task is gone
-        given().when().get("/{id}", 102).then().statusCode(404);
+        given().when().get("/{id}", 999018).then().statusCode(404);
     }
 
     /**
@@ -212,8 +212,8 @@ class FunctionalTests {
     @Test
     void shouldReturnTasksSortedByDueDate() {
         given().when().get().then().statusCode(200)
-            // Seed data sorted by due date: ID 100 has earliest (2026-01-15)
-            .body("content[0].id", equalTo(100))
+            // Seed data sorted by due date: ID 999016 has earliest (2026-01-15)
+            .body("content[0].id", equalTo(999016))
             .body("content[0].dueDate", equalTo("2026-01-15T10:00:00"));
     }
 
@@ -344,7 +344,7 @@ class FunctionalTests {
             """;
 
         given().contentType(ContentType.JSON).body(updateBody).when()
-            .patch("/{id}/status", 105)  // Use protected task (doesn't matter, fails before reaching DB)
+            .patch("/{id}/status", 999001)  // Use protected task (doesn't matter, fails before reaching DB)
             .then().statusCode(400);
         // Just verify it's a 400 - exact error handling for enum parsing may vary
     }
@@ -390,7 +390,7 @@ class FunctionalTests {
      */
     @Test
     void shouldUpdateTaskViaHttpPut() {
-        // Use expendable task 104 (Modifiable - No Description)
+        // Use expendable task 999020 (Modifiable - No Description)
         String updateBody = """
             {
                 "title": "Fully Updated Task",
@@ -400,8 +400,8 @@ class FunctionalTests {
             }
             """;
 
-        given().contentType(ContentType.JSON).body(updateBody).when().put("/{id}", 104).then().statusCode(200)
-            .body("id", equalTo(104)).body("title", equalTo("Fully Updated Task"))
+        given().contentType(ContentType.JSON).body(updateBody).when().put("/{id}", 999020).then().statusCode(200)
+            .body("id", equalTo(999020)).body("title", equalTo("Fully Updated Task"))
             .body("description", equalTo("Now has a description")).body("dueDate", equalTo("2026-03-15T16:30:00"))
             .body("status", equalTo("IN_PROGRESS"));
     }
@@ -411,22 +411,22 @@ class FunctionalTests {
      */
     @Test
     void shouldUpdateStatusViaPut() {
-        // Use expendable task 103 (Modifiable - Pending)
+        // Use expendable task 999019 (Modifiable - Pending)
         // Keep other fields the same, just change status
         String updateBody = """
             {
                 "title": "Modifiable - Pending",
-                "description": "Safe to modify",
+                "description": "Used in update test",
                 "dueDate": "2026-01-18T10:00:00",
                 "status": "COMPLETED"
             }
             """;
 
-        given().contentType(ContentType.JSON).body(updateBody).when().put("/{id}", 103).then().statusCode(200)
-            .body("id", equalTo(103)).body("status", equalTo("COMPLETED"));
+        given().contentType(ContentType.JSON).body(updateBody).when().put("/{id}", 999019).then().statusCode(200)
+            .body("id", equalTo(999019)).body("status", equalTo("COMPLETED"));
 
         // Verify it persisted
-        given().when().get("/{id}", 103).then().statusCode(200).body("status", equalTo("COMPLETED"));
+        given().when().get("/{id}", 999019).then().statusCode(200).body("status", equalTo("COMPLETED"));
     }
 
     /**
@@ -459,7 +459,7 @@ class FunctionalTests {
             }
             """;
 
-        given().contentType(ContentType.JSON).body(updateBody).when().put("/{id}", 105).then().statusCode(400)
+        given().contentType(ContentType.JSON).body(updateBody).when().put("/{id}", 999001).then().statusCode(400)
             .body("status", equalTo(400)).body("error", equalTo("Validation Failed"))
             .body("validationErrors.title", notNullValue());
     }
@@ -476,7 +476,7 @@ class FunctionalTests {
             }
             """;
 
-        given().contentType(ContentType.JSON).body(updateBody).when().put("/{id}", 105).then().statusCode(400)
+        given().contentType(ContentType.JSON).body(updateBody).when().put("/{id}", 999001).then().statusCode(400)
             .body("status", equalTo(400)).body("error", equalTo("Validation Failed"))
             .body("validationErrors.dueDate", notNullValue());
     }
@@ -497,7 +497,7 @@ class FunctionalTests {
                 """, longTitle
         );
 
-        given().contentType(ContentType.JSON).body(updateBody).when().put("/{id}", 105).then().statusCode(400)
+        given().contentType(ContentType.JSON).body(updateBody).when().put("/{id}", 999001).then().statusCode(400)
             .body("status", equalTo(400)).body("validationErrors.title", notNullValue());
     }
 
@@ -514,7 +514,7 @@ class FunctionalTests {
             }
             """;
 
-        given().contentType(ContentType.JSON).body(updateBody).when().put("/{id}", 105).then().statusCode(400);
+        given().contentType(ContentType.JSON).body(updateBody).when().put("/{id}", 999001).then().statusCode(400);
     }
 
     /**
@@ -523,7 +523,7 @@ class FunctionalTests {
      */
     @Test
     void shouldPaginateTasksViaHttp() {
-        // Using protected tasks (105-119, 15 tasks minimum)
+        // Using protected tasks (999001-999015, 15 tasks minimum)
         // Request page 0, size 5
         given().queryParam("page", 0).queryParam("size", 5).when().get().then().statusCode(200)
             .body("content", hasSize(5))  // Should have 5 items
@@ -551,7 +551,7 @@ class FunctionalTests {
      */
     @Test
     void shouldSearchTasksByTextViaHttp() {
-        // Protected task 105 has title "Protected - Pending 1"
+        // Protected task 999001 has title "Protected - Pending 1"
         given().queryParam("search", "Protected").when().get().then().statusCode(200)
             .body("content", hasSize(greaterThanOrEqualTo(1))).body("content.title", hasItems("Protected - Pending 1"));
     }
@@ -571,11 +571,11 @@ class FunctionalTests {
      */
     @Test
     void shouldFilterByDateRangeViaHttp() {
-        // Protected tasks 105-109 are due 2026-01-20 to 2026-01-24
+        // Protected tasks 999001-999005 are due 2026-01-20 to 2026-01-24
         given().queryParam("dueDateFrom", "2026-01-20T00:00:00").queryParam("dueDateTo", "2026-01-24T23:59:59").when()
             .get().then().statusCode(200)
             .body("content", hasSize(greaterThanOrEqualTo(5)))  // At least 5 protected PENDING tasks
-            .body("content.id", hasItems(105, 106, 107, 108, 109));
+            .body("content.id", hasItems(999001, 999002, 999003, 999004, 999005));
     }
 
     /**
@@ -583,11 +583,11 @@ class FunctionalTests {
      */
     @Test
     void shouldCombineStatusAndDateRangeViaHttp() {
-        // Protected PENDING tasks 105-109 are due 2026-01-20 to 2026-01-24
+        // Protected PENDING tasks 999001-999005 are due 2026-01-20 to 2026-01-24
         given().queryParam("status", "PENDING").queryParam("dueDateFrom", "2026-01-20T00:00:00")
             .queryParam("dueDateTo", "2026-01-24T23:59:59").when().get().then().statusCode(200)
             .body("content", hasSize(greaterThanOrEqualTo(5))).body("content.status", everyItem(equalTo("PENDING")))
-            .body("content.id", hasItems(105, 106, 107, 108, 109));
+            .body("content.id", hasItems(999001, 999002, 999003, 999004, 999005));
     }
 
     /**
@@ -595,7 +595,7 @@ class FunctionalTests {
      */
     @Test
     void shouldCombineAllFiltersViaHttp() {
-        // Protected PENDING tasks 105-109 have "Protected" in title, due 2026-01-20 to 2026-01-24
+        // Protected PENDING tasks 999001-999005 have "Protected" in title, due 2026-01-20 to 2026-01-24
         given().queryParam("status", "PENDING").queryParam("search", "Protected")
             .queryParam("dueDateFrom", "2026-01-20T00:00:00").queryParam("dueDateTo", "2026-01-24T23:59:59")
             .queryParam("page", 0).queryParam("size", 3).when().get().then().statusCode(200)
@@ -629,9 +629,9 @@ class FunctionalTests {
      */
     @Test
     void shouldFilterByDueDateFromOnlyViaHttp() {
-        // Tasks due on or after 2026-01-25 (IN_PROGRESS tasks 110-114)
+        // Tasks due on or after 2026-01-25 (IN_PROGRESS tasks 999006-999010)
         given().queryParam("dueDateFrom", "2026-01-25T00:00:00").when().get().then().statusCode(200)
-            .body("content", hasSize(greaterThanOrEqualTo(5))).body("content.id", hasItems(110, 111, 112, 113, 114));
+            .body("content", hasSize(greaterThanOrEqualTo(5))).body("content.id", hasItems(999006, 999007, 999008, 999009, 999010));
     }
 
     /**
@@ -639,11 +639,11 @@ class FunctionalTests {
      */
     @Test
     void shouldFilterByDueDateToOnlyViaHttp() {
-        // Use only protected tasks 105-109
+        // Includes protected tasks 999001-999005 and expendable tasks
         given().queryParam("dueDateTo", "2026-01-24T23:59:59")
             .when().get()
             .then().statusCode(200)
-            .body("content.id", hasItems(105, 106, 107, 108, 109));
+            .body("content.id", hasItems(999001, 999002, 999003, 999004, 999005));
     }
 
     /**
