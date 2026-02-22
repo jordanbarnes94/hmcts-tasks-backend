@@ -2,9 +2,11 @@ package uk.gov.hmcts.reform.dev;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.data.web.config.EnableSpringDataWebSupport;
 
 @SpringBootApplication
-@SuppressWarnings("HideUtilityClassConstructor") // Spring needs a constructor, its not a utility class
+@EnableSpringDataWebSupport(pageSerializationMode = EnableSpringDataWebSupport.PageSerializationMode.VIA_DTO)
+@SuppressWarnings("HideUtilityClassConstructor") // Spring needs a constructor, it's not a utility class
 public class Application {
 
     public static void main(final String[] args) {

@@ -46,11 +46,22 @@ public class GlobalExceptionHandler {
     ) {
         Map<String, String> validationErrors = new HashMap<>();
 
+        // Log the rejected values for debugging
+        logger.warn("Validation failed for {} {}", request.getMethod(), request.getRequestURI());
+        Object target = ex.getBindingResult().getTarget();
+        if (target != null) {
+            logger.warn("Request body: {}", target);
+        }
+
         // Extract all validation errors
         ex.getBindingResult().getAllErrors().forEach((error) -> {
             String fieldName = ((FieldError) error).getField();
+            Object rejectedValue = ((FieldError) error).getRejectedValue();
             String errorMessage = error.getDefaultMessage();
             validationErrors.put(fieldName, errorMessage);
+
+            logger.warn("  - Field '{}': rejected value '{}', reason: {}",
+                fieldName, rejectedValue, errorMessage);
         });
 
         ErrorResponse errorResponse = new ErrorResponse(

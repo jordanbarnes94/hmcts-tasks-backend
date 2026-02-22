@@ -60,7 +60,7 @@ class TaskServiceTest {
         when(taskRepository.save(any(Task.class))).thenReturn(savedTask);
 
         // Create DTO with same data
-        CreationDTO dto = new CreationDTO(title, description, LocalDateTime.parse(dueDate));
+        CreationDTO dto = new CreationDTO(title, description, dueDate);
 
         // Act
         ResponseDTO result = taskService.createTask(dto);
@@ -294,7 +294,7 @@ class TaskServiceTest {
         updatedTask.setDueDate(LocalDateTime.parse(newDueDate));
         when(taskRepository.save(any(Task.class))).thenReturn(updatedTask);
 
-        UpdateDTO dto = new UpdateDTO(newTitle, newDescription, LocalDateTime.parse(newDueDate), newStatus);
+        UpdateDTO dto = new UpdateDTO(newTitle, newDescription, newDueDate, newStatus);
 
         // Act
         ResponseDTO result = taskService.updateTask(taskId, dto);
@@ -321,7 +321,7 @@ class TaskServiceTest {
         final TaskStatus newStatus = TaskStatus.COMPLETED;
         when(taskRepository.findById(taskId)).thenReturn(Optional.empty());
 
-        UpdateDTO dto = new UpdateDTO(newTitle, newDescription, LocalDateTime.parse(newDueDate), newStatus);
+        UpdateDTO dto = new UpdateDTO(newTitle, newDescription, newDueDate, newStatus);
 
         // Act & Assert
         assertThrows(TaskNotFoundException.class, () -> taskService.updateTask(taskId, dto));

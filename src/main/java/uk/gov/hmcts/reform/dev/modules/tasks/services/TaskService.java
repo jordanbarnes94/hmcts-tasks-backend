@@ -17,16 +17,22 @@ import uk.gov.hmcts.reform.dev.modules.tasks.repositories.TaskRepository;
 import uk.gov.hmcts.reform.dev.modules.tasks.specifications.TaskSpecifications;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @Service
 public class TaskService {
 
     private static final Logger logger = LoggerFactory.getLogger(TaskService.class);
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
     private final TaskRepository taskRepository;
 
     public TaskService(TaskRepository taskRepository) {
         this.taskRepository = taskRepository;
+    }
+
+    private LocalDateTime parseDateTime(String dateTimeString) {
+        return LocalDateTime.parse(dateTimeString, DATE_TIME_FORMATTER);
     }
 
     public ResponseDTO createTask(CreationDTO dto) {
@@ -37,7 +43,7 @@ public class TaskService {
             task.setTitle(dto.getTitle());
             task.setDescription(dto.getDescription());
             task.setStatus(TaskStatus.PENDING);
-            task.setDueDate(dto.getDueDate());
+            task.setDueDate(parseDateTime(dto.getDueDate()));
 
             Task savedTask = taskRepository.save(task);
             logger.info("Task created successfully with ID: {}", savedTask.getId());
@@ -66,7 +72,7 @@ public class TaskService {
 
         task.setTitle(dto.getTitle());
         task.setDescription(dto.getDescription());
-        task.setDueDate(dto.getDueDate());
+        task.setDueDate(parseDateTime(dto.getDueDate()));
         task.setStatus(dto.getStatus());
         Task updatedTask = taskRepository.save(task);
 
