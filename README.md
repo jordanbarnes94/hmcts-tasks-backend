@@ -150,17 +150,18 @@ GET /api/tasks now returns a paginated response:
       "title": "Review case",
       "description": "Complete assessment",
       "status": "PENDING",
+      "statusDisplayValue": "Pending",
       "dueDate": "2026-01-15T10:00:00",
       "createdAt": "2026-01-01T09:00:00",
       "updatedAt": "2026-01-01T09:00:00"
     }
   ],
-  "totalPages": 5,
-  "totalElements": 47,
-  "size": 10,
-  "number": 0,
-  "first": true,
-  "last": false
+  "page": {
+    "size": 10,
+    "number": 0,
+    "totalElements": 47,
+    "totalPages": 5
+  }
 }
 ```
 
